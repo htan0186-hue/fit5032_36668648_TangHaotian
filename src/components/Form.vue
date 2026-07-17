@@ -4,11 +4,11 @@
       <div class="row justify-content-center">
         <div class="col-12 col-sm-11 col-md-10 col-lg-9 col-xl-8">
           <section class="form">
-            <p class="lab-label">FIT5032 Assessed Lab 4</p>
+            <p class="lab-label">FIT5032 Assessed Lab 5</p>
             <h1>User Information Form</h1>
             <p class="text-muted mb-4">
-              Validation is handled with Vue and submitted records are displayed
-              in a PrimeVue DataTable.
+              Validation is handled with Vue events, including password
+              confirmation and submitted records in a PrimeVue DataTable.
             </p>
 
             <form
@@ -53,6 +53,24 @@
                   </div>
 
                   <div class="col-6 col-sm-6 col-md-6">
+                    <label for="confirm-password" class="form-label">
+                      Confirm password
+                    </label>
+                    <input
+                      type="password"
+                      class="form-control form-control-lg"
+                      :class="{ 'is-invalid': errors.confirmPassword }"
+                      id="confirm-password"
+                      name="confirm-password"
+                      v-model="formData.confirmPassword"
+                      @blur="() => validateConfirmPassword(true)"
+                    />
+                    <div v-if="errors.confirmPassword" class="text-danger small mt-1">
+                      {{ errors.confirmPassword }}
+                    </div>
+                  </div>
+
+                  <div class="col-6 col-sm-6 col-md-6">
                     <div class="form-check resident-check pt-0 pt-md-5">
                       <input
                         type="checkbox"
@@ -93,6 +111,20 @@
                     </div>
                   </div>
 
+                  <div class="col-6 col-sm-6 col-md-6">
+                    <label for="suburb" class="form-label">Suburb</label>
+                    <input
+                      type="text"
+                      class="form-control form-control-lg"
+                      id="suburb"
+                      name="suburb"
+                      :value="formData.suburb"
+                    />
+                    <div class="small text-muted mt-1">
+                      One-way binding for Vue DevTools testing.
+                    </div>
+                  </div>
+
                   <div class="col-12">
                     <label for="reason" class="form-label">Reason for joining</label>
                     <textarea
@@ -109,6 +141,9 @@
                       <div v-if="errors.reason" class="text-danger small mt-1">
                         {{ errors.reason }}
                       </div>
+                      <div v-else-if="reasonFriendMessage" class="text-success small mt-1">
+                        {{ reasonFriendMessage }}
+                      </div>
                       <div v-else class="small text-muted mt-1">
                         Minimum 10 characters.
                       </div>
@@ -123,9 +158,11 @@
                   <strong>Validation rules:</strong>
                   <span>username length</span>
                   <span>password strength</span>
+                  <span>password confirmation</span>
                   <span>resident confirmation</span>
                   <span>gender selection</span>
                   <span>reason length</span>
+                  <span>friend keyword response</span>
                 </div>
 
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mt-4">
@@ -157,6 +194,7 @@
               >
                 <Column field="username" header="Username" sortable />
                 <Column field="maskedPassword" header="Password" />
+                <Column field="suburb" header="Suburb" sortable />
                 <Column field="residentLabel" header="Australian Resident" sortable />
                 <Column field="gender" header="Gender" sortable />
                 <Column field="reason" header="Reason" />
@@ -170,14 +208,16 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 
 const emptyForm = () => ({
   username: '',
   password: '',
+  confirmPassword: '',
   isAustralian: false,
+  suburb: 'Clayton',
   reason: '',
   gender: '',
 })
@@ -185,6 +225,7 @@ const emptyForm = () => ({
 const emptyErrors = () => ({
   username: null,
   password: null,
+  confirmPassword: null,
   isAustralian: null,
   gender: null,
   reason: null,
@@ -193,6 +234,12 @@ const emptyErrors = () => ({
 const formData = ref(emptyForm())
 const errors = ref(emptyErrors())
 const submittedUsers = ref([])
+
+const reasonFriendMessage = computed(() => {
+  return formData.value.reason.toLowerCase().includes('friend')
+    ? 'Great to have a friend'
+    : ''
+})
 
 const validateName = (blur) => {
   if (formData.value.username.length < 3) {
@@ -221,6 +268,17 @@ const validatePassword = (blur) => {
   }
 
   errors.value.password = null
+  validateConfirmPassword(false)
+  return true
+}
+
+const validateConfirmPassword = (blur) => {
+  if (formData.value.password !== formData.value.confirmPassword) {
+    if (blur) errors.value.confirmPassword = 'Passwords do not match.'
+    return false
+  }
+
+  errors.value.confirmPassword = null
   return true
 }
 
@@ -262,11 +320,19 @@ const validateReason = (blur) => {
 const validateForm = () => {
   const nameValid = validateName(true)
   const passwordValid = validatePassword(true)
+  const confirmPasswordValid = validateConfirmPassword(true)
   const residentValid = validateResident(true)
   const genderValid = validateGender(true)
   const reasonValid = validateReason(true)
 
-  return nameValid && passwordValid && residentValid && genderValid && reasonValid
+  return (
+    nameValid &&
+    passwordValid &&
+    confirmPasswordValid &&
+    residentValid &&
+    genderValid &&
+    reasonValid
+  )
 }
 
 const submitForm = () => {
